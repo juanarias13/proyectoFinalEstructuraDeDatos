@@ -28,6 +28,18 @@ public class Cola<T> {
         // TODO: Crear nuevo nodo, enlazarlo al final.
         // Si la cola está vacía, frente y fin apuntan al nuevo nodo.
         // Si no, enlazar fin.siguiente al nuevo nodo y actualizar fin.
+        
+        Nodo<T> nuevoNodo = new Nodo<>(valor);
+        if(estaVacia()){
+            frente = nuevoNodo;
+            fin = nuevoNodo;
+        } else {
+            fin.siguiente = nuevoNodo;
+            fin = nuevoNodo;
+        }
+        tamaño++;
+        
+
     }
 
     /**
@@ -39,7 +51,18 @@ public class Cola<T> {
         // TODO: Guardar el valor del frente, mover frente al siguiente.
         // Si frente queda null, fin también debe ser null.
         // Lanzar RuntimeException si está vacía.
-        throw new RuntimeException("Cola vacía");
+
+
+        if(estaVacia()){
+            throw new RuntimeException("Cola vacía");
+        }
+        T valor = frente.valor;
+        frente = frente.siguiente;
+        if (frente == null) {
+            fin = null;
+        }
+        tamaño--;
+        return valor;
     }
 
     /**
@@ -49,7 +72,10 @@ public class Cola<T> {
      */
     public synchronized T peek() {
         // TODO: Retornar el valor del frente sin modificar la cola.
-        throw new RuntimeException("Cola vacía");
+        if(estaVacia()){
+            throw new RuntimeException("Cola vacía");
+        }
+        return frente.valor;
     }
 
     public synchronized boolean estaVacia() {

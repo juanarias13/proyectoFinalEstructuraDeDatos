@@ -24,6 +24,11 @@ public class Pila<T> {
     public void push(T valor) {
         // TODO: Crear un nuevo nodo, enlazarlo al tope actual,
         // y actualizar el tope.
+
+        Nodo<T> nuevoNodo = new Nodo<>(valor);
+        nuevoNodo.siguiente = tope;
+        tope = nuevoNodo;
+        tamaño++;
     }
 
     /**
@@ -35,7 +40,15 @@ public class Pila<T> {
         // TODO: Guardar el valor del tope, mover el tope al siguiente,
         // decrementar tamaño y retornar el valor.
         // Lanzar RuntimeException si está vacía.
-        throw new RuntimeException("Pila vacía");
+
+        if (estaVacia()) {
+            throw new RuntimeException("Pila vacía");
+        }
+
+        T valor = tope.valor;
+        tope = tope.siguiente;
+        tamaño--;
+        return valor;
     }
 
     /**
@@ -45,7 +58,11 @@ public class Pila<T> {
      */
     public T peek() {
         // TODO: Retornar el valor del tope sin modificar la pila.
-        throw new RuntimeException("Pila vacía");
+
+        if(estaVacia()){
+            throw new RuntimeException("Pila vacía");
+        }
+        return tope.valor;
     }
 
     public boolean estaVacia() {
