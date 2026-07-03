@@ -1,10 +1,9 @@
 package gui;
 
+import java.awt.*;
+import javax.swing.*;
 import modelo.Enemigo;
 import modelo.Nave;
-
-import javax.swing.*;
-import java.awt.*;
 
 /**
  * Panel visual de combate que muestra la nave vs el enemigo con animaciones.
@@ -86,11 +85,39 @@ public class PanelCombate extends JPanel {
      * }).start();
      */
     public void animarDisparo(boolean esDelJugador) {
-        // TODO: Implementar la animación del proyectil moviéndose
-        // de un lado al otro del panel
         this.disparoDelJugador = esDelJugador;
-        // Placeholder: solo repinta sin animación
-        repaint();
+        disparoActivo = true;
+
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+        if (panelWidth <= 0) panelWidth = 700;
+        if (panelHeight <= 0) panelHeight = 200;
+
+        if (esDelJugador) {
+            proyectilX = 150;
+            proyectilY = panelHeight / 2.0;
+        } else {
+            proyectilX = panelWidth - 150;
+            proyectilY = panelHeight / 2.0;
+        }
+
+        double destinoX = esDelJugador ? panelWidth - 150 : 150;
+        double paso = esDelJugador ? 15 : -15;
+
+        new Thread(() -> {
+            while (disparoActivo && ((esDelJugador && proyectilX < destinoX) || (!esDelJugador && proyectilX > destinoX))) {
+                proyectilX += paso;
+                SwingUtilities.invokeLater(this::repaint);
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            disparoActivo = false;
+            SwingUtilities.invokeLater(this::repaint);
+        }).start();
     }
 
     @Override

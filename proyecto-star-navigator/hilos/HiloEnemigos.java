@@ -19,6 +19,8 @@ public class HiloEnemigos extends Thread {
 
     private Cola<Enemigo> colaEnemigos;
     private volatile boolean activo;
+    private volatile boolean oleadaPendiente;
+    private final Object lock = new Object();
     private int oleada;
     private HiloListener listener;
 
@@ -35,9 +37,17 @@ public class HiloEnemigos extends Thread {
     public HiloEnemigos(Cola<Enemigo> colaEnemigos) {
         this.colaEnemigos = colaEnemigos;
         this.activo = true;
+        this.oleadaPendiente = false;
         this.oleada = 0;
         setDaemon(true);
         setName("Hilo-Enemigos");
+    }
+
+    public void solicitarOleada() {
+        synchronized (lock) {
+            this.oleadaPendiente = true;
+            lock.notifyAll();
+        }
     }
 
     public void setListener(HiloListener listener) {
@@ -66,6 +76,37 @@ public class HiloEnemigos extends Thread {
     public void run() {
         // TODO: Implementar el ciclo de generación de oleadas
         // Recuerda envolver Thread.sleep en try-catch InterruptedException
+        while (activo) {
+            synchronized (lock) {
+                if (!oleadaPendiente) {
+                    try {
+                        lock.wait(8000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                oleadaPendiente = false;
+                if (!activo) break;
+            }
+
+            if (!activo) break;
+            if (!colaEnemigos.estaVacia()) {
+                continue;
+            }
+            oleada++;
+            int cantidadEnemigos = Math.min(4, 1 + (oleada / 2));
+            for (int i = 0; i < cantidadEnemigos; i++) {
+                String nombre = NOMBRES_ENEMIGOS[(int) (Math.random() * NOMBRES_ENEMIGOS.length)];
+                int vida = 20 + oleada * 5 + (int) (Math.random() * 10);
+                int ataque = 5 + oleada * 2 + (int) (Math.random() * 5);
+                int recompensa = 10 + oleada * 5;
+                colaEnemigos.enqueue(new Enemigo(nombre, vida, ataque, recompensa));
+            }
+            if (listener != null) {
+                listener.onOleadaGenerada(oleada, cantidadEnemigos);
+            }
+        }
     }
 
     public void detener() {

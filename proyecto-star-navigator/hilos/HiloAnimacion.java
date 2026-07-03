@@ -1,5 +1,7 @@
 package hilos;
 
+import javax.swing.SwingUtilities;
+
 /**
  * Hilo de animación que mueve la nave visualmente entre planetas.
  * 
@@ -97,6 +99,41 @@ public class HiloAnimacion extends Thread {
         // Este hilo corre indefinidamente. Cuando 'animando' es true,
         // interpola la posición de la nave y notifica al listener en cada frame.
         // Cuando 'animando' es false, simplemente espera (sleep).
+        while (activo) {
+            try {
+                if (animando) {
+                    int totalFrames = 30;
+                    for (int i = 0; i <= totalFrames; i++) {
+                        if (!activo) break;
+                        double progreso = i / (double) totalFrames;
+                        naveX = origenX + (destinoX - origenX) * progreso;
+                        naveY = origenY + (destinoY - origenY) * progreso;
+                        if (listener != null) {
+                            SwingUtilities.invokeLater(() -> listener.onFrameAnimacion(naveX, naveY));
+                        }
+                        try {
+                            Thread.sleep(30);
+                        } catch (InterruptedException e) {
+                            if (!activo) break;
+                        }
+                    }
+                    naveX = destinoX;
+                    naveY = destinoY;
+                    animando = false;
+                    if (listener != null) {
+                        SwingUtilities.invokeLater(() -> listener.onAnimacionTerminada());
+                    }
+                } else {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        if (!activo) break;
+                    }
+                }
+            } catch (Exception e) {
+                break;
+            }
+        }
     }
 
     public boolean isAnimando() {

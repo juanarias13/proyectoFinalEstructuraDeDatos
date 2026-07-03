@@ -68,9 +68,40 @@ public class Grafo {
      * 5. Si la cola se vacía sin encontrar destino, retornar lista vacía
      */
     public List<String> caminoMasCorto(String inicio, String destino) {
-        // TODO: Implementar BFS
-        return new ArrayList<>();
+        List<String> camino = new ArrayList<>();
+        if (inicio == null || destino == null) return camino;
+        if (!adyacencia.containsKey(inicio) || !adyacencia.containsKey(destino)) return camino;
+
+        Queue<String> cola = new LinkedList<>();
+        Set<String> visitados = new HashSet<>();
+        Map<String, String> padre = new HashMap<>();
+
+        cola.add(inicio);
+        visitados.add(inicio);
+        padre.put(inicio, null);
+
+        while (!cola.isEmpty()) {
+            String actual = cola.poll();
+            if (actual.equals(destino)) {
+                // Reconstruir camino
+                LinkedList<String> ruta = new LinkedList<>();
+                for (String nodo = destino; nodo != null; nodo = padre.get(nodo)) {
+                    ruta.addFirst(nodo);
+                }
+                return ruta;
+            }
+            for (String vecino : vecinos(actual)) {
+                if (!visitados.contains(vecino)) {
+                    visitados.add(vecino);
+                    padre.put(vecino, actual);
+                    cola.add(vecino);
+                }
+            }
+        }
+
+        return camino; // vacío si no se encontró
     }
+    
 
     /**
      * DFS: Descubre todos los planetas alcanzables desde un punto.
@@ -84,9 +115,22 @@ public class Grafo {
      *    y llamar recursivamente para cada vecino no visitado
      */
     public List<String> explorarDFS(String inicio) {
-        // TODO: Implementar DFS recursivo
         List<String> orden = new ArrayList<>();
-        orden.add(inicio); // placeholder
+        if (inicio == null) return orden;
+        if (!adyacencia.containsKey(inicio)) return orden;
+        Set<String> visitados = new HashSet<>();
+        dfsRecursivo(inicio, visitados, orden);
         return orden;
+    }
+
+    private void dfsRecursivo(String nodo, Set<String> visitados, List<String> orden) {
+        if (visitados.contains(nodo)) return;
+        visitados.add(nodo);
+        orden.add(nodo);
+        for (String vecino : vecinos(nodo)) {
+            if (!visitados.contains(vecino)) {
+                dfsRecursivo(vecino, visitados, orden);
+            }
+        }
     }
 }

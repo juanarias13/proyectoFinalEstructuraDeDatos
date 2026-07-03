@@ -20,10 +20,14 @@ public class HiloCombate extends Thread {
     private Nave nave;
     private volatile boolean activo;
     private volatile boolean enCombate;
+    private int recompensaCombate;
     private CombateListener listener;
 
     public interface CombateListener {
+        void onNuevoEnemigo(Enemigo enemigo);
         void onTurnoCombate(String mensaje);
+        void onDisparo(boolean esDelJugador);
+        void onVidasActualizadas(int vidaJugador, int vidaEnemigo);
         void onCombateTerminado(boolean victoria, int recompensa);
     }
 
@@ -32,6 +36,7 @@ public class HiloCombate extends Thread {
         this.nave = nave;
         this.activo = true;
         this.enCombate = false;
+        this.recompensaCombate = 0;
         setDaemon(true);
         setName("Hilo-Combate");
     }
@@ -42,6 +47,7 @@ public class HiloCombate extends Thread {
 
     public void iniciarCombate() {
         this.enCombate = true;
+        this.recompensaCombate = 0; // mejora: acumular recompensa total de la sesión de combate
     }
 
     @Override
@@ -82,6 +88,74 @@ public class HiloCombate extends Thread {
      */
     private void procesarCombate() {
         // TODO: Implementar combate por turnos usando la Cola de enemigos
+        if (colaEnemigos.estaVacia()) {
+            enCombate = false;
+            return;
+        }
+
+        Enemigo enemigo = colaEnemigos.dequeue();
+        if (listener != null) {
+            listener.onNuevoEnemigo(enemigo);
+            listener.onTurnoCombate("Combate contra: " + enemigo.toString());
+        }
+
+        while (enemigo.estaVivo() && nave.estaVivo()) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                return;
+            }
+
+            if (listener != null) {
+                listener.onDisparo(true);
+            }
+            int danioJugador = nave.getAtaque() + (int) (Math.random() * 5);
+            enemigo.recibirDaño(danioJugador);
+            if (listener != null) {
+                listener.onTurnoCombate("Atacaste a " + enemigo.getNombre() + " por " + danioJugador + " de daño.");
+                listener.onVidasActualizadas(nave.getVida(), enemigo.getVida());
+            }
+
+            if (!enemigo.estaVivo()) {
+                int recompensa = enemigo.getRecompensa();
+                recompensaCombate += recompensa; // mejora: acumular recompensa total de la sesión
+                nave.sumarPuntuacion(recompensa);
+                if (listener != null) {
+                    listener.onTurnoCombate("Enemigo derrotado: " + enemigo.getNombre() + " (+" + recompensa + " pts)");
+                    listener.onVidasActualizadas(nave.getVida(), enemigo.getVida());
+                }
+                if (colaEnemigos.estaVacia()) {
+                    enCombate = false;
+                    if (listener != null) {
+                        listener.onCombateTerminado(true, recompensaCombate);
+                    }
+                }
+                return;
+            }
+
+            try {
+                Thread.sleep(800);
+            } catch (InterruptedException e) {
+                return;
+            }
+
+            if (listener != null) {
+                listener.onDisparo(false);
+            }
+            int danioEnemigo = enemigo.getAtaque();
+            nave.recibirDaño(danioEnemigo);
+            if (listener != null) {
+                listener.onTurnoCombate("Recibiste " + danioEnemigo + " de daño.");
+                listener.onVidasActualizadas(nave.getVida(), enemigo.getVida());
+            }
+        }
+
+        if (!nave.estaVivo()) {
+            enCombate = false;
+            if (listener != null) {
+                listener.onCombateTerminado(false, 0);
+            }
+        }
     }
 
     public boolean isEnCombate() {

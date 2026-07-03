@@ -49,7 +49,14 @@ public class Nave {
         // 3. Actualizar planetaActual al nuevo planeta
         // 4. Restar 10 de combustible
         // 5. Retornar true
-        return false;
+        if (combustible < 10) return false;
+        if (planetaActual != null) {
+            historialNavegacion.push(planetaActual);
+        }
+        planetaActual = planeta;
+        combustible -= 10;
+        if (combustible < 0) combustible = 0;
+        return true;
     }
 
     /**
@@ -62,11 +69,18 @@ public class Nave {
     public String retroceder() {
         // TODO:
         // 1. Verificar que la pila no esté vacía, si lo está retornar null
-        // 2. Hacer pop del historialNavegacion
-        // 3. Actualizar planetaActual con el valor obtenido
-        // 4. Restar 5 de combustible
-        // 5. Retornar el planetaActual
-        return null;
+        // 2. Verificar que haya combustible suficiente para retroceder
+        // 3. Hacer pop del historialNavegacion
+        // 4. Actualizar planetaActual con el valor obtenido
+        // 5. Restar 5 de combustible
+        // 6. Retornar el planetaActual
+        if (historialNavegacion.estaVacia()) return null;
+        if (combustible < 5) return null;
+        String anterior = historialNavegacion.pop();
+        planetaActual = anterior;
+        combustible -= 5;
+        if (combustible < 0) combustible = 0;
+        return planetaActual;
     }
 
     /**
@@ -81,6 +95,10 @@ public class Nave {
         // 1. Verificar que inventario.tamaño() < MAX_INVENTARIO
         // 2. Si hay espacio, agregar el objeto y retornar true
         // 3. Si no, retornar false
+        if (inventario.tamaño() < MAX_INVENTARIO) {
+            inventario.agregar(objeto);
+            return true;
+        }
         return false;
     }
 
@@ -102,7 +120,27 @@ public class Nave {
         //    - "material" → puntuacion += objeto.getValor()
         // 3. Eliminar el objeto del inventario
         // 4. Retornar true (o false si no existía)
-        return false;
+        if (!inventario.contiene(objeto)) return false;
+        String tipo = objeto.getTipo();
+        int valor = objeto.getValor();
+        switch (tipo) {
+            case "combustible":
+                combustible += valor;
+                break;
+            case "arma":
+                ataque += valor;
+                break;
+            case "escudo":
+                escudo += valor;
+                break;
+            case "material":
+                puntuacion += valor;
+                break;
+            default:
+                break;
+        }
+        inventario.eliminar(objeto);
+        return true;
     }
 
     // --- Métodos de combate (completos) ---

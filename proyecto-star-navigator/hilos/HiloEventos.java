@@ -56,6 +56,34 @@ public class HiloEventos extends Thread {
     @Override
     public void run() {
         // TODO: Implementar el ciclo de generación de eventos
+        while (activo) {
+            int espera = 5000 + (int) (Math.random() * 7000);
+            try {
+                Thread.sleep(espera);
+            } catch (InterruptedException e) {
+                break;
+            }
+            if (!activo) break;
+            double valor = Math.random();
+            if (listener == null) continue;
+            if (valor < 0.3) {
+                int danio = 5 + (int) (Math.random() * 15);
+                listener.onEvento("asteroide", "¡Lluvia de asteroides! Daño: " + danio, danio);
+            } else if (valor < 0.6) {
+                String[] nombres = {"Cristal Cósmico", "Energia Pura", "Artefacto Alien", "Núcleo Lumínico"};
+                String[] tipos = {"combustible", "arma", "escudo", "material"};
+                String nombre = nombres[(int) (Math.random() * nombres.length)];
+                String tipo = tipos[(int) (Math.random() * tipos.length)];
+                int valorObjeto = 10 + (int) (Math.random() * 11);
+                ObjetoEspacial objeto = new ObjetoEspacial(nombre, tipo, valorObjeto);
+                listener.onEvento("cofre", "Cofre flotante: " + nombre, objeto);
+            } else if (valor < 0.8) {
+                listener.onEvento("señal", "Señal de auxilio. +25 pts", 25);
+            } else {
+                int combustible = 10 + (int) (Math.random() * 10);
+                listener.onEvento("nebulosa", "Nebulosa energética. +" + combustible, combustible);
+            }
+        }
     }
 
     public void detener() {

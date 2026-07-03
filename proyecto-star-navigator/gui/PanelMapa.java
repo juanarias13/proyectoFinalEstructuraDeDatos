@@ -25,6 +25,10 @@ import java.util.Map;
  */
 public class PanelMapa extends JPanel {
 
+    private static final double MAPA_ANCHO = 700.0;
+    private static final double MAPA_ALTO = 600.0;
+    private static final int MARGEN = 28;
+
     private Grafo grafo;
     private Map<String, Planeta> planetas;
     private String planetaActual;
@@ -103,7 +107,8 @@ public class PanelMapa extends JPanel {
                 Planeta p2 = planetas.get(vecino);
                 if (p2 == null) continue;
                 if (nodo.compareTo(vecino) < 0) {
-                    g2d.drawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY());
+                    g2d.drawLine(escalarX(p1.getX()), escalarY(p1.getY()),
+                                 escalarX(p2.getX()), escalarY(p2.getY()));
                 }
             }
         }
@@ -113,8 +118,10 @@ public class PanelMapa extends JPanel {
         for (Map.Entry<String, Planeta> entry : planetas.entrySet()) {
             Planeta p = entry.getValue();
             int radio = 18;
-            int x = p.getX() - radio;
-            int y = p.getY() - radio;
+            int px = escalarX(p.getX());
+            int py = escalarY(p.getY());
+            int x = px - radio;
+            int y = py - radio;
 
             // Color según tipo
             Color color;
@@ -150,11 +157,11 @@ public class PanelMapa extends JPanel {
                 g2d.setFont(new Font("Monospaced", Font.PLAIN, 10));
                 FontMetrics fm = g2d.getFontMetrics();
                 int textWidth = fm.stringWidth(p.getNombre());
-                g2d.drawString(p.getNombre(), p.getX() - textWidth / 2, p.getY() + radio + 15);
+                g2d.drawString(p.getNombre(), px - textWidth / 2, py + radio + 15);
             } else {
                 g2d.setColor(new Color(150, 150, 150));
                 g2d.setFont(new Font("Monospaced", Font.PLAIN, 10));
-                g2d.drawString("???", p.getX() - 10, p.getY() + radio + 15);
+                g2d.drawString("???", px - 10, py + radio + 15);
             }
         }
     }
@@ -169,8 +176,8 @@ public class PanelMapa extends JPanel {
             // - Rotar el Graphics2D y dibujar un polígono triangular
             // - Agregar una "estela" de partículas detrás de la nave
 
-            int nx = (int) naveVisualX;
-            int ny = (int) naveVisualY;
+            int nx = escalarX(naveVisualX);
+            int ny = escalarY(naveVisualY);
 
             // Estela simple (círculos que se desvanecen)
             // [MEJORA UI] TODO: Mejorar la estela con más partículas y colores
@@ -188,8 +195,8 @@ public class PanelMapa extends JPanel {
             // La nave está estacionada en un planeta
             Planeta p = planetas.get(planetaActual);
             if (p != null) {
-                int nx = p.getX();
-                int ny = p.getY() - 25; // arriba del planeta
+                int nx = escalarX(p.getX());
+                int ny = escalarY(p.getY()) - 25; // arriba del planeta
 
                 // [MEJORA UI] TODO: Mejorar el sprite de la nave estacionada
                 g2d.setColor(Color.YELLOW);
@@ -199,5 +206,25 @@ public class PanelMapa extends JPanel {
                 g2d.drawString("▲", nx - 4, ny - 6);
             }
         }
+    }
+
+    private int escalarX(double x) {
+        double escala = obtenerEscala();
+        double anchoEscalado = MAPA_ANCHO * escala;
+        double offsetX = (getWidth() - anchoEscalado) / 2.0;
+        return (int) Math.round(offsetX + x * escala);
+    }
+
+    private int escalarY(double y) {
+        double escala = obtenerEscala();
+        double altoEscalado = MAPA_ALTO * escala;
+        double offsetY = (getHeight() - altoEscalado) / 2.0;
+        return (int) Math.round(offsetY + y * escala);
+    }
+
+    private double obtenerEscala() {
+        double anchoDisponible = Math.max(1, getWidth() - MARGEN * 2.0);
+        double altoDisponible = Math.max(1, getHeight() - MARGEN * 2.0);
+        return Math.min(anchoDisponible / MAPA_ANCHO, altoDisponible / MAPA_ALTO);
     }
 }

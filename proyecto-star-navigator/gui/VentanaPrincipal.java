@@ -1,14 +1,13 @@
 package gui;
 
-import logica.MotorJuego;
-import modelo.*;
-import hilos.*;
 import estructuras.ArbolBST;
-
-import javax.swing.*;
+import hilos.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
+import javax.swing.*;
+import logica.MotorJuego;
+import modelo.*;
 
 /**
  * Ventana principal del juego Star Navigator.
@@ -59,8 +58,15 @@ public class VentanaPrincipal extends JFrame {
         panelInfo = new PanelInfo();
         add(panelInfo, BorderLayout.EAST);
 
+        panelCombate = new PanelCombate();
+        panelCombate.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(60, 60, 90)), "Combate"));
+
         JPanel panelControles = crearPanelControles();
-        add(panelControles, BorderLayout.SOUTH);
+        JPanel panelInferior = new JPanel(new BorderLayout());
+        panelInferior.add(panelCombate, BorderLayout.CENTER);
+        panelInferior.add(panelControles, BorderLayout.SOUTH);
+        add(panelInferior, BorderLayout.SOUTH);
 
         setSize(1000, 750);
         setLocationRelativeTo(null);
@@ -77,6 +83,8 @@ public class VentanaPrincipal extends JFrame {
 
         comboDestinos = new JComboBox<>();
         comboDestinos.setPreferredSize(new Dimension(150, 25));
+        comboDestinos.setBackground(Color.WHITE);
+        comboDestinos.setForeground(Color.BLACK);
         JLabel lblDestino = new JLabel("Destino:");
         lblDestino.setForeground(Color.WHITE);
         filaBotones.add(lblDestino);
@@ -117,8 +125,10 @@ public class VentanaPrincipal extends JFrame {
     private JButton crearBoton(String texto, Color color) {
         JButton btn = new JButton(texto);
         btn.setBackground(color);
-        btn.setForeground(Color.WHITE);
+        btn.setForeground(Color.BLACK);
+        btn.setOpaque(true);
         btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
         btn.setFont(new Font("SansSerif", Font.BOLD, 10));
         btn.setMargin(new Insets(3, 8, 3, 8));
         return btn;
@@ -157,21 +167,54 @@ public class VentanaPrincipal extends JFrame {
         if (motor.getHiloCombate() != null) {
             motor.getHiloCombate().setListener(new HiloCombate.CombateListener() {
                 @Override
+                public void onNuevoEnemigo(Enemigo enemigo) {
+                    SwingUtilities.invokeLater(() -> panelCombate.iniciarCombate(motor.getNave(), enemigo));
+                }
+
+                @Override
                 public void onTurnoCombate(String mensaje) {
                     SwingUtilities.invokeLater(() -> log(mensaje));
+                }
+
+                @Override
+                public void onDisparo(boolean esDelJugador) {
+                    SwingUtilities.invokeLater(() -> panelCombate.animarDisparo(esDelJugador));
+                }
+
+                @Override
+                public void onVidasActualizadas(int vidaJugador, int vidaEnemigo) {
+                    SwingUtilities.invokeLater(() -> panelCombate.actualizarVidas(vidaJugador, vidaEnemigo));
                 }
 
                 @Override
                 public void onCombateTerminado(boolean victoria, int recompensa) {
                     SwingUtilities.invokeLater(() -> {
                         if (victoria) {
-                            log("Victoria! Recompensa: " + recompensa + " pts");
+                            log("Victoria! Recompensa total del combate: " + recompensa + " pts");
                         } else {
                             log("Tu nave ha sido destruida... Fin del juego.");
                             accionTerminar();
                         }
+                        panelCombate.ocultarProyectil();
                         actualizarUI();
                     });
+                }
+            });
+        }
+
+        // mejora: integrar animación de viaje con el panel del mapa
+        if (motor.getHiloAnimacion() != null) {
+            motor.getHiloAnimacion().setListener(new HiloAnimacion.AnimacionListener() {
+                @Override
+                public void onFrameAnimacion(double x, double y) {
+                    panelMapa.setPosicionNave(x, y);
+                }
+
+                @Override
+                public void onAnimacionTerminada() {
+                    panelMapa.ocultarNaveAnimada();
+                    panelMapa.setPlanetaActual(motor.getNave().getPlanetaActual());
+                    actualizarUI();
                 }
             });
         }
@@ -237,6 +280,8 @@ public class VentanaPrincipal extends JFrame {
             log("No hay enemigos en la cola para combatir.");
             return;
         }
+        Enemigo enemigo = motor.getColaEnemigos().peek();
+        panelCombate.iniciarCombate(motor.getNave(), enemigo);
         log("Iniciando combate...");
         motor.combatir();
     }
@@ -284,9 +329,17 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private void actualizarUI() {
+        String destinoSeleccionado = (String) comboDestinos.getSelectedItem();
         comboDestinos.removeAllItems();
+        boolean seleccionDisponible = false;
         for (String destino : motor.getDestinosDisponibles()) {
             comboDestinos.addItem(destino);
+            if (destino.equals(destinoSeleccionado)) {
+                seleccionDisponible = true;
+            }
+        }
+        if (seleccionDisponible) {
+            comboDestinos.setSelectedItem(destinoSeleccionado);
         }
         panelInfo.actualizar(motor.getNave(), motor.getColaMisiones(),
             motor.getColaEnemigos().tamaño());

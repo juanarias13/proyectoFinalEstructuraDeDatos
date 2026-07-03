@@ -1,10 +1,9 @@
 package logica;
 
 import estructuras.*;
-import modelo.*;
 import hilos.*;
-
 import java.util.*;
+import modelo.*;
 
 /**
  * Motor central del juego. Conecta las estructuras de datos con la lógica.
@@ -89,6 +88,13 @@ public class MotorJuego {
         // Misión 3: "Explorar anomalía", planeta objetivo "Zephyr", recompensa 40
         // Misión 4: "Rescate en Kronos", planeta objetivo "Kronos", recompensa 60
         // Misión 5: "Comerciar en Elysium", planeta objetivo "Elysium", recompensa 35
+
+        colaMisiones.enqueue(new Mision("Recolectar cristales", "Recolectar cristales raros.", "Nebula X", 30));
+        colaMisiones.enqueue(new Mision("Eliminar piratas", "Eliminar banda pirata.", "Orion VII", 50));
+        colaMisiones.enqueue(new Mision("Explorar anomalía", "Investigar anomalía espacial.", "Zephyr", 40));
+        colaMisiones.enqueue(new Mision("Rescate en Kronos", "Rescatar colonos.", "Kronos", 60));
+        colaMisiones.enqueue(new Mision("Comerciar en Elysium", "Comerciar recursos.", "Elysium", 35));
+
     }
 
     private void inicializarRankingBase() {
@@ -99,6 +105,12 @@ public class MotorJuego {
         // "Estelar" - 200 pts
         // "Rookie" - 50 pts
         // "Leyenda" - 800 pts
+
+        ranking.insertar("Capitán Cosmos", 500);
+        ranking.insertar("Nova", 350);
+        ranking.insertar("Estelar", 200);
+        ranking.insertar("Rookie", 50);
+        ranking.insertar("Leyenda", 800);
     }
 
     // --- Acciones del jugador ---
@@ -117,7 +129,35 @@ public class MotorJuego {
      */
     public String viajarA(String destino) {
         // TODO: Implementar la lógica de viaje
-        return "Función viajarA no implementada";
+        String origen = nave.getPlanetaActual();
+        if (origen == null) return "Origen desconocido.";
+        // 1. Verificar arista
+        if (!mapaGalactico.hayArista(origen, destino)) {
+            return "No hay ruta directa a " + destino + ".";
+        }
+        // 2. Verificar combustible
+        if (nave.getCombustible() < 10) {
+            return "Combustible insuficiente para viajar.";
+        }
+        // Integrar animación si está disponible
+        Planeta pOrigen = planetas.get(origen);
+        Planeta pDestino = planetas.get(destino);
+        if (hiloAnimacion != null && pOrigen != null && pDestino != null) {
+            hiloAnimacion.animarViaje(pOrigen.getX(), pOrigen.getY(), pDestino.getX(), pDestino.getY());
+        }
+        // 3. Realizar viaje
+        boolean ok = nave.viajarA(destino);
+        if (!ok) return "Viaje fallido (combustible).";
+        // 4. Marcar explorado
+        if (pDestino != null) pDestino.setExplorado(true);
+        // 5. Verificar misión
+        verificarMision(destino);
+        // 5b. Solicitar oleada de enemigos tras llegar al nuevo planeta
+        if (hiloEnemigos != null) {
+            hiloEnemigos.solicitarOleada();
+        }
+        // 6. Retornar mensaje
+        return "Viajaste a " + destino + ".";
     }
 
     /**
@@ -125,8 +165,20 @@ public class MotorJuego {
      * TODO: Implementar
      */
     public String retroceder() {
-        // TODO: Llamar nave.retroceder() y retornar mensaje apropiado
-        return "Función retroceder no implementada";
+        if (nave.getHistorialNavegacion().estaVacia()) {
+            return "No hay historial para retroceder.";
+        }
+        if (nave.getCombustible() < 5) {
+            return "Combustible insuficiente para retroceder.";
+        }
+        String anterior = nave.retroceder();
+        if (anterior == null) return "No se pudo retroceder.";
+        Planeta p = planetas.get(anterior);
+        if (p != null) p.setExplorado(true);
+        if (hiloEnemigos != null) {
+            hiloEnemigos.solicitarOleada();
+        }
+        return "Retrocediste a " + anterior + ".";
     }
 
     /**
@@ -135,7 +187,11 @@ public class MotorJuego {
      */
     public String calcularRuta(String destino) {
         // TODO: Usar mapaGalactico.caminoMasCorto() y formatear el resultado
-        return "Función BFS no implementada";
+        String inicio = nave.getPlanetaActual();
+        if (inicio == null) return "Origen desconocido.";
+        List<String> ruta = mapaGalactico.caminoMasCorto(inicio, destino);
+        if (ruta.isEmpty()) return "No hay ruta a " + destino + ".";
+        return String.join(" -> ", ruta);
     }
 
     /**
@@ -144,7 +200,11 @@ public class MotorJuego {
      */
     public String explorarDesdeActual() {
         // TODO: Usar mapaGalactico.explorarDFS() y formatear el resultado
-        return "Función DFS no implementada";
+        String inicio = nave.getPlanetaActual();
+        if (inicio == null) return "Origen desconocido.";
+        List<String> orden = mapaGalactico.explorarDFS(inicio);
+        if (orden.isEmpty()) return "No se encontraron planetas alcanzables.";
+        return String.join(", ", orden);
     }
 
     /**
@@ -159,6 +219,13 @@ public class MotorJuego {
      */
     private void verificarMision(String planeta) {
         // TODO: Implementar verificación de misiones con la Cola
+        if (colaMisiones.estaVacia()) return;
+        Mision m = colaMisiones.peek();
+        if (m.getPlanetaObjetivo().equals(planeta)) {
+            colaMisiones.dequeue();
+            m.completar();
+            nave.sumarPuntuacion(m.getRecompensa());
+        }
     }
 
     // --- Hilos (completo) ---
@@ -195,9 +262,9 @@ public class MotorJuego {
     public HiloAnimacion getHiloAnimacion() { return hiloAnimacion; }
 
     public void combatir() {
-        if (!colaEnemigos.estaVacia()) {
-            hiloCombate.iniciarCombate();
-        }
+        if (hiloCombate == null) return;
+        if (colaEnemigos.estaVacia()) return;
+        hiloCombate.iniciarCombate();
     }
 
     public void terminarJuego() {
